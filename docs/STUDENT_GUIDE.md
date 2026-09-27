@@ -84,6 +84,7 @@ Click **Next ▶**.
 - The top picture is a grid of colours: each row is one chunk, each column is one of its numbers.
 - The bottom picture shows every chunk as an **arrow** in 3-D space. **Drag it with your mouse to spin it around.**
   Arrows pointing in a **similar direction** have **similar meaning**.
+  They're all light blue for now: no question has been asked yet, so nothing has been retrieved.
 - 💡 A 2D/3D switch sits above the pictures. **2D map** shows chunks as dots instead, where similar topics sit closer together.
 - 👀 In the left column, the vector store now shows **11 × 384**: 11 chunks, 384 numbers each.
 

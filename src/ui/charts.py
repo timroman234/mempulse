@@ -89,7 +89,11 @@ def vector_space_3d(points: np.ndarray, ids: list[str], sims: np.ndarray | None,
     fig = go.Figure()
     arrows = []  # (id, tip xyz, colour, width, hover text)
     for i, cid in enumerate(ids):
-        if cid == answer_id:
+        if qpt is None:
+            # Ingest steps: no question yet, so nothing is "retrieved" or "left
+            # behind". Every chunk is simply a stored vector.
+            col, w = "#a6c8ff", 3
+        elif cid == answer_id:
             col, w = "#ffb000", 6        # gold = the chunk holding the answer
         elif cid in top_ids:
             col, w = "#42be65", 5        # green = retrieved into memory
@@ -118,17 +122,23 @@ def vector_space_3d(points: np.ndarray, ids: list[str], sims: np.ndarray | None,
                                    textfont=dict(color=col, size=12 if big else 9), showlegend=False))
 
     # Legend entries (dummy traces) so the colours are self-explanatory.
-    for name, col in [("query", "#4589ff"), ("retrieved (top-k)", "#42be65"), ("answer chunk", "#ffb000"), ("not retrieved", "#6f6f6f")]:
-        if qpt is None and name in ("query", "retrieved (top-k)", "answer chunk"):
-            continue
+    legend = ([("stored chunk (no question asked yet)", "#a6c8ff")] if qpt is None else
+              [("query", "#4589ff"), ("retrieved (top-k)", "#42be65"), ("answer chunk", "#ffb000"), ("not retrieved", "#6f6f6f")])
+    for name, col in legend:
         fig.add_trace(go.Scatter3d(x=[None], y=[None], z=[None], mode="lines", line=dict(color=col, width=6), name=name))
 
     axis = dict(showticklabels=False, title="", backgroundcolor="#262626", gridcolor="#393939",
                 zerolinecolor="#6f6f6f", range=[-1.15, 1.15], showspikes=False)
-    fig.update_layout(**_LAYOUT, height=400, title="Vector space 3-D · drag to rotate",
+    fig.update_layout(**_LAYOUT, height=400, title="Vector space 3-D · drag to rotate" if qpt is not None else "Stored vectors 3-D · drag to rotate",
                       scene=dict(xaxis=axis, yaxis=axis, zaxis=axis, aspectmode="cube",
                                  camera=dict(eye=dict(x=1.15, y=1.15, z=0.75))),
-                      legend=dict(orientation="h", x=0, y=1.02, bgcolor="rgba(0,0,0,0)", font=dict(size=10)))
+                      legend=dict(orientation="h", x=0, y=1.0, bgcolor="rgba(0,0,0,0)", font=dict(size=10)))
+    # Extra headroom: Plotly's hover toolbar sits in the top-right corner and
+    # would otherwise cover the title. Push the title down under the toolbar
+    # and the 3-D scene below the legend.
+    fig.update_layout(margin=dict(l=10, r=10, t=78, b=10),
+                      title=dict(y=1 - 40 / 400, yanchor="top"))
+    fig.update_scenes(domain=dict(y=[0.0, 0.9]))
     return fig
 
 
@@ -144,9 +154,14 @@ def similarity_bars(ids: list[str], sims: np.ndarray, top_k: int, answer_id: str
     fig.add_hline(y=top_k - 0.5, line=dict(color="#fa4d56", dash="dash"),
                   annotation_text=f"top-{top_k} cut-off", annotation_position="bottom right",
                   annotation_font_color="#fa4d56", annotation_font_size=10)
-    fig.update_layout(**_LAYOUT, height=max(220, 22 * len(ys) + 60),
+    height = max(268, 22 * len(ys) + 108)
+    fig.update_layout(**_LAYOUT, height=height,
                       title="Cosine similarity · gold = answer",
                       yaxis=dict(autorange="reversed"), xaxis=dict(range=[min(0, min(xs)) - 0.05, 1.3]))
+    # Same headroom as the 3-D chart: keep the title below Plotly's hover
+    # toolbar (title top sits 40 px down, like the 3-D chart beside it).
+    fig.update_layout(margin=dict(l=10, r=10, t=78, b=10),
+                      title=dict(y=1 - 40 / height, yanchor="top"))
     return fig
 
 
