@@ -70,11 +70,73 @@ def pca_map(points: np.ndarray, ids: list[str], sims: np.ndarray | None, qpt: np
     return fig
 
 
+def vector_space_3d(points: np.ndarray, ids: list[str], sims: np.ndarray | None, qpt: np.ndarray | None,
+                    top_ids: list[str], answer_id: str | None) -> go.Figure:
+    """Chunks and query as ARROWS from the origin in a 3-D PCA projection.
+
+    Why arrows? Cosine similarity only cares about DIRECTION, not length. Two
+    arrows pointing the same way = similar meaning, no matter how long. So we
+    scale every arrow to unit length: all tips sit on a sphere, and the only
+    thing left to see is the angle θ between arrows (cos θ = similarity).
+
+    Honesty note: this squeezes 384 dimensions into 3, so on-screen angles are
+    approximate. The hover shows the TRUE 384-D cosine and angle.
+    """
+    def unit(v):
+        n = np.linalg.norm(v)
+        return v / n if n else v
+
+    fig = go.Figure()
+    arrows = []  # (id, tip xyz, colour, width, hover text)
+    for i, cid in enumerate(ids):
+        if cid == answer_id:
+            col, w = "#ffb000", 6        # gold = the chunk holding the answer
+        elif cid in top_ids:
+            col, w = "#42be65", 5        # green = retrieved into memory
+        else:
+            col, w = "#6f6f6f", 2        # grey = left behind
+        hover = cid
+        if sims is not None:
+            theta = np.degrees(np.arccos(np.clip(sims[i], -1, 1)))
+            hover += f"<br>cos = {sims[i]:.3f} · θ = {theta:.1f}° (true 384-D)"
+        arrows.append((cid, unit(points[i]), col, w, hover))
+    if qpt is not None:
+        arrows.append(("query", unit(qpt), "#4589ff", 8, "query embedding"))
+
+    for cid, tip, col, w, hover in arrows:
+        # Shaft: a line from the origin to the tip.
+        fig.add_trace(go.Scatter3d(x=[0, tip[0]], y=[0, tip[1]], z=[0, tip[2]], mode="lines",
+                                   line=dict(color=col, width=w), hoverinfo="skip", showlegend=False))
+        # Head: a small cone at the tip pointing outward, plus a label.
+        fig.add_trace(go.Cone(x=[tip[0]], y=[tip[1]], z=[tip[2]], u=[tip[0]], v=[tip[1]], w=[tip[2]],
+                              anchor="tip", sizemode="absolute", sizeref=0.18, showscale=False,
+                              colorscale=[[0, col], [1, col]], hoverinfo="skip"))
+        # Before any question is asked, label every chunk; afterwards only the important ones.
+        big = qpt is None or cid == "query" or col != "#6f6f6f"
+        fig.add_trace(go.Scatter3d(x=[tip[0] * 1.08], y=[tip[1] * 1.08], z=[tip[2] * 1.08], mode="text",
+                                   text=[cid if big else ""], hovertext=[hover], hoverinfo="text",
+                                   textfont=dict(color=col, size=12 if big else 9), showlegend=False))
+
+    # Legend entries (dummy traces) so the colours are self-explanatory.
+    for name, col in [("query", "#4589ff"), ("retrieved (top-k)", "#42be65"), ("answer chunk", "#ffb000"), ("not retrieved", "#6f6f6f")]:
+        if qpt is None and name in ("query", "retrieved (top-k)", "answer chunk"):
+            continue
+        fig.add_trace(go.Scatter3d(x=[None], y=[None], z=[None], mode="lines", line=dict(color=col, width=6), name=name))
+
+    axis = dict(showticklabels=False, title="", backgroundcolor="#262626", gridcolor="#393939",
+                zerolinecolor="#6f6f6f", range=[-1.15, 1.15], showspikes=False)
+    fig.update_layout(**_LAYOUT, height=400, title="Vector space 3-D · drag to rotate",
+                      scene=dict(xaxis=axis, yaxis=axis, zaxis=axis, aspectmode="cube",
+                                 camera=dict(eye=dict(x=1.15, y=1.15, z=0.75))),
+                      legend=dict(orientation="h", x=0, y=1.02, bgcolor="rgba(0,0,0,0)", font=dict(size=10)))
+    return fig
+
+
 def similarity_bars(ids: list[str], sims: np.ndarray, top_k: int, answer_id: str | None) -> go.Figure:
     order = np.argsort(-sims)
     ys = [ids[i] for i in order]
     xs = [float(sims[i]) for i in order]
-    colors = ["#ffb000" if ys[r] == answer_id else ("#0f62fe" if r < top_k else "#525252") for r in range(len(ys))]
+    colors = ["#ffb000" if ys[r] == answer_id else ("#42be65" if r < top_k else "#525252") for r in range(len(ys))]
     fig = go.Figure(go.Bar(x=xs, y=ys, orientation="h", marker_color=colors,
                            text=[f"{x:.3f}" for x in xs], textposition="outside",
                            hovertemplate="%{y}: %{x:.4f}<extra></extra>"))
@@ -84,7 +146,7 @@ def similarity_bars(ids: list[str], sims: np.ndarray, top_k: int, answer_id: str
                   annotation_font_color="#fa4d56", annotation_font_size=10)
     fig.update_layout(**_LAYOUT, height=max(220, 22 * len(ys) + 60),
                       title="Cosine similarity · gold = answer",
-                      yaxis=dict(autorange="reversed"), xaxis=dict(range=[min(0, min(xs)) - 0.05, 1.05]))
+                      yaxis=dict(autorange="reversed"), xaxis=dict(range=[min(0, min(xs)) - 0.05, 1.3]))
     return fig
 
 

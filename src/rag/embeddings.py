@@ -135,8 +135,8 @@ def get_embedder(name: str):
     return FastEmbedder() if name == "bge-small" else HashingEmbedder()
 
 
-def pca_2d(matrix: np.ndarray, extra: np.ndarray | None = None) -> tuple[np.ndarray, np.ndarray | None]:
-    """Project 384-D vectors down to 2-D so humans can look at them.
+def pca_2d(matrix: np.ndarray, extra: np.ndarray | None = None, n: int = 2) -> tuple[np.ndarray, np.ndarray | None]:
+    """Project 384-D vectors down to 2-D (or n-D, e.g. 3) so humans can look at them.
 
     PCA finds the two directions along which the chunk vectors vary most. We fit
     on the chunks only, then project the query with the *same* transform, so the
@@ -144,13 +144,18 @@ def pca_2d(matrix: np.ndarray, extra: np.ndarray | None = None) -> tuple[np.ndar
     on screen usually means similar, but trust the cosine bars for the truth.
     """
     if len(matrix) < 2:
-        pts = np.zeros((len(matrix), 2))
-        return pts, (np.zeros((len(extra), 2)) if extra is not None else None)
+        pts = np.zeros((len(matrix), n))
+        return pts, (np.zeros((len(extra), n)) if extra is not None else None)
     mean = matrix.mean(axis=0)
     centered = matrix - mean
     # SVD: rows of vt are the principal directions, sorted by variance.
     _, _, vt = np.linalg.svd(centered, full_matrices=False)
-    comps = vt[:2].T
+    comps = vt[:n].T
     pts = centered @ comps
+    if pts.shape[1] < n:  # fewer chunks than requested dims: pad with zeros
+        pad = n - pts.shape[1]
+        pts = np.pad(pts, ((0, 0), (0, pad)))
+        extra_pts = np.pad((extra - mean) @ comps, ((0, 0), (0, pad))) if extra is not None else None
+        return pts, extra_pts
     extra_pts = (extra - mean) @ comps if extra is not None else None
     return pts, extra_pts

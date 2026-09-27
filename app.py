@@ -291,9 +291,30 @@ with left:
         ui.context_gauge(cur.state["context_window"], cfg["budget"])
 
 # -------------------------------------------------------------- STAGE LENS
+
+def space_chart(sims, qvec, top_ids, answer_id):
+    """Vector-space picture in the view chosen by the 2D/3D toggle.
+
+    3D draws each vector as an ARROW from the origin, so the cosine ANGLE is
+    visible. 2D draws points, which is better for seeing clusters.
+    """
+    extra = qvec[None, :] if qvec is not None else None
+    if ss.get("space_view", "3D arrows") == "3D arrows":
+        pts, q = pca_2d(index.vectors, extra, n=3)
+        return charts.vector_space_3d(pts, ids, sims, q[0] if q is not None else None, top_ids, answer_id)
+    pts, q = pca_2d(index.vectors, extra)
+    return charts.pca_map(pts, ids, sims, q[0] if q is not None else None, top_ids, answer_id)
+
+
 with center:
     ui.panel_title(f"Stage lens · {INGEST_LABELS.get(cur.node) or NODE_LABELS.get(cur.node)}")
     node = cur.node
+    if node in ("embed", "index", "retrieve"):
+        # Stored in our own session key: a widget's key is cleared on steps where
+        # the widget isn't drawn, which would reset the choice every time.
+        views = ["3D arrows", "2D map"]
+        ss.space_view = st.radio("Vector view", views, index=views.index(ss.get("space_view", "3D arrows")),
+                                 horizontal=True, label_visibility="collapsed")
 
     if node == "load":
         ui.doc_ribbon(doc, [], span)
@@ -308,18 +329,16 @@ with center:
         ui.doc_ribbon(doc, index.chunks, span, fact_intact=fact_intact)
     elif node in ("embed", "index"):
         st.plotly_chart(charts.embedding_heatmap(index.vectors, ids), width="stretch")
-        pts, _ = pca_2d(index.vectors)
-        st.plotly_chart(charts.pca_map(pts, ids, None, None, [], None), width="stretch")
+        st.plotly_chart(space_chart(None, None, [], None), width="stretch")
     elif node == "recall_ltm":
         st.markdown("**Loaded long-term profile** (this is all the agent knows about *you* before searching):")
         st.json(cur.state["long_term_memory"])
         st.caption("Without this tier, every conversation starts from zero, and turn 3 would forget the allergy from turn 2.")
     elif node == "retrieve":
         sims = index.scores(query)
-        pts, qpt = pca_2d(index.vectors, index.query_vector(query)[None, :])
         top_ids = [c["chunk_id"] for c in cur.state["retrieved_chunks"]]
         a, b = st.columns(2)
-        a.plotly_chart(charts.pca_map(pts, ids, sims, qpt[0], top_ids, diag["answer_chunk"]), width="stretch")
+        a.plotly_chart(space_chart(sims, index.query_vector(query), top_ids, diag["answer_chunk"]), width="stretch")
         b.plotly_chart(charts.similarity_bars(ids, sims, cfg["top_k"], diag["answer_chunk"]), width="stretch")
         ui.doc_ribbon(doc, index.chunks, span, hit_ids=set(top_ids), fact_intact=fact_intact)
     elif node == "assemble_context":

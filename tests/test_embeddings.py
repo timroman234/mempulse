@@ -46,3 +46,12 @@ def test_pca_shapes():
     m = np.random.default_rng(2).normal(size=(6, 20))
     pts, q = pca_2d(m, m[:1])
     assert pts.shape == (6, 2) and q.shape == (1, 2)
+
+
+def test_pca_3d_shapes_and_padding():
+    m = np.random.default_rng(3).normal(size=(6, 20))
+    pts, q = pca_2d(m, m[:1], n=3)
+    assert pts.shape == (6, 3) and q.shape == (1, 3)
+    # Only 2 chunks → at most 1 real component; the rest is zero-padded.
+    pts2, q2 = pca_2d(m[:2], m[:1], n=3)
+    assert pts2.shape == (2, 3) and q2.shape == (1, 3)

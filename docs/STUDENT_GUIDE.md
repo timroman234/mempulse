@@ -82,7 +82,9 @@ Click **Next ▶**.
 
 **Step 3: Embed**
 - The top picture is a grid of colours: each row is one chunk, each column is one of its numbers.
-- The bottom picture puts every chunk on a map. **Chunks about similar topics sit closer together.**
+- The bottom picture shows every chunk as an **arrow** in 3-D space. **Drag it with your mouse to spin it around.**
+  Arrows pointing in a **similar direction** have **similar meaning**.
+- 💡 A 2D/3D switch sits above the pictures. **2D map** shows chunks as dots instead, where similar topics sit closer together.
 - 👀 In the left column, the vector store now shows **11 × 384**: 11 chunks, 384 numbers each.
 
 Click **Next ▶**.
@@ -104,9 +106,12 @@ Step through each box with **Next ▶** and look for these things:
 - The AI loads what it already knows about the patient (asthma, seasonal allergies, likes short answers).
 
 **Retrieve** ⭐ *the most important step*
-- **Left chart:** the map again, now with a **yellow star ★** for your question. Dotted lines connect it to the 3 chunks it picked.
-- 👀 One chunk has a **gold ring**: that's the chunk holding the answer.
-- **Right chart:** every chunk ranked by similarity. Blue bars made it in; grey bars didn't. The **red dashed line** is the top-3 cut-off.
+- **Left chart:** the 3-D arrows again, now with a **blue arrow for your question**.
+  **Green** arrows are the 3 chunks it picked, and the **gold** arrow is the chunk holding the answer. Grey ones were left behind.
+- 👀 **Spin the picture.** Is the blue question arrow pointing almost the same way as the gold one? The smaller the **angle** between them, the more similar they are.
+- 👀 **Hover** over an arrow tip to see its similarity score and its angle θ (for example, cos = 0.71 means θ ≈ 45°).
+- (In **2D map** mode, your question is a **yellow star ★** instead, with dotted lines to the 3 chunks it picked.)
+- **Right chart:** every chunk ranked by similarity. Green bars made it in (gold = the answer chunk); grey bars didn't. The **red dashed line** is the top-3 cut-off.
 - 👀 **Is the gold bar above the red line?** If yes, the answer got retrieved.
 
 > 🤔 **Notice:** your question says "painkiller" and "day", but the document says "analgesic" and "24 hours".
