@@ -1,0 +1,30 @@
+[project]
+name = "mempulse"
+version = "0.1.0"
+description = "Visual Agent Memory & State Debugger for LangGraph RAG workflows"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "anthropic>=1.8.0",
+    "fastembed>=0.8.1",
+    "langchain-text-splitters>=1.1.2",
+    "langgraph>=1.2.12",
+    "numpy>=2.5.3",
+    "pandas>=3.0.6",
+    "plotly>=7.1.0",
+    "python-dotenv>=1.2.3",
+    "streamlit>=1.64.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.16.9",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 130
